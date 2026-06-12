@@ -781,7 +781,7 @@ Expected: FAIL — module not found.
 
 Create `domain/breaks/optimizeBreaks.ts`:
 ```typescript
-import { enumerateIntervals, toMinutes, intervalCovered } from "../scheduling/intervals";
+import { enumerateIntervals, toMinutes, toHHmm, intervalCovered } from "../scheduling/intervals";
 
 export interface Requirement {
   date: string;
@@ -845,14 +845,16 @@ export function optimizeBreaks(
         best = iv;
       }
     }
-    const chosen = best ?? candidates[0] ?? s.shiftStart;
-    // decrement present across the break's intervals
+    if (candidates.length === 0) continue; // break longer than shift: cannot place; skip
+    const chosen = best!;
+    // decrement present across the break's intervals (each touched interval is
+    // treated as fully occupied — fractional break/interval overlaps free no capacity)
     for (
       let t = toMinutes(chosen);
       t < toMinutes(chosen) + s.breakMinutes;
       t += intervalLengthMinutes
     ) {
-      const iv = `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+      const iv = toHHmm(t);
       const k = key(s.date, iv);
       present.set(k, (present.get(k) ?? 0) - 1);
     }
