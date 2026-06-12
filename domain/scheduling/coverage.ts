@@ -1,4 +1,4 @@
-import { intervalCovered } from "./intervals";
+import { intervalCovered, toMinutes } from "./intervals";
 
 export interface Requirement {
   date: string;
@@ -26,16 +26,21 @@ export interface CoverageCell {
   deficit: number; // max(0, required - present)
 }
 
+/**
+ * An agent counts as absent for an interval if any of their breaks overlaps
+ * that interval. Overlap is detected on minutes-since-midnight: a break and an
+ * interval overlap when the break starts before the interval ends and ends
+ * after the interval starts. (A break shorter than the interval still marks the
+ * agent absent.)
+ */
 function onBreak(intervalStart: string, intervalLen: number, breaks: BreakSlot[]): boolean {
-  return breaks.some((b) =>
-    intervalCovered(intervalStart, intervalLen, b.start, addMinutes(b.start, b.durationMinutes)),
-  );
-}
-
-function addMinutes(hhmm: string, minutes: number): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const total = h * 60 + m + minutes;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  const ivStart = toMinutes(intervalStart);
+  const ivEnd = ivStart + intervalLen;
+  return breaks.some((b) => {
+    const bStart = toMinutes(b.start);
+    const bEnd = bStart + b.durationMinutes;
+    return bStart < ivEnd && bEnd > ivStart; // any overlap
+  });
 }
 
 export function computeCoverage(
