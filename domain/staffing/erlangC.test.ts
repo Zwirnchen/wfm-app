@@ -40,3 +40,39 @@ describe("serviceLevel", () => {
     expect(slHigh).toBeLessThanOrEqual(1);
   });
 });
+
+import { requiredAgents } from "./erlangC";
+import type { StaffingParams } from "../types";
+
+const params: StaffingParams = {
+  serviceLevelTarget: 0.8,
+  thresholdSeconds: 20,
+  shrinkagePercent: 0,
+  maxOccupancy: 0.95,
+  intervalLengthMinutes: 30,
+};
+
+describe("requiredAgents", () => {
+  it("returns 0 when there are no calls", () => {
+    expect(requiredAgents(0, 300, params)).toBe(0);
+  });
+
+  it("requires more agents than the raw traffic load", () => {
+    // 100 calls * 180s / 1800s = 10 Erlangs; need a margin above 10
+    const n = requiredAgents(100, 180, params);
+    expect(n).toBeGreaterThan(10);
+    expect(n).toBeLessThan(20);
+  });
+
+  it("applies shrinkage as a gross-up", () => {
+    const withShrink = requiredAgents(100, 180, { ...params, shrinkagePercent: 0.5 });
+    const without = requiredAgents(100, 180, params);
+    expect(withShrink).toBe(Math.ceil(without / 0.5));
+  });
+
+  it("never lets occupancy exceed maxOccupancy", () => {
+    const n = requiredAgents(100, 180, { ...params, maxOccupancy: 0.7 });
+    const a = trafficIntensityErlangs(100, 180, 30);
+    expect(a / n).toBeLessThanOrEqual(0.7 + 1e-9);
+  });
+});

@@ -1,3 +1,5 @@
+import type { StaffingParams } from "../types";
+
 /** Traffic intensity in Erlangs for one interval. */
 export function trafficIntensityErlangs(
   calls: number,
@@ -47,4 +49,35 @@ export function serviceLevel(
   const c = erlangC(a, servers);
   const sl = 1 - c * Math.exp((-(servers - a) * thresholdSeconds) / ahtSeconds);
   return Math.max(0, Math.min(1, sl));
+}
+
+const MAX_AGENTS = 1000; // safety bound to avoid infinite loops
+
+/**
+ * Smallest agent count meeting the service-level target AND the occupancy cap,
+ * then grossed up for shrinkage. Returns 0 for zero traffic.
+ */
+export function requiredAgents(
+  calls: number,
+  ahtSeconds: number,
+  params: StaffingParams,
+): number {
+  const a = trafficIntensityErlangs(calls, ahtSeconds, params.intervalLengthMinutes);
+  if (a <= 0) return 0;
+
+  let n = Math.max(1, Math.floor(a) + 1);
+  while (n < MAX_AGENTS) {
+    const sl = serviceLevel(a, n, ahtSeconds, params.thresholdSeconds);
+    const occupancy = a / n;
+    if (sl >= params.serviceLevelTarget && occupancy <= params.maxOccupancy) {
+      break;
+    }
+    n++;
+  }
+
+  const shrink = params.shrinkagePercent;
+  if (shrink > 0 && shrink < 1) {
+    n = Math.ceil(n / (1 - shrink));
+  }
+  return n;
 }
