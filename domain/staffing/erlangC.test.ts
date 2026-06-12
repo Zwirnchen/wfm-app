@@ -18,3 +18,25 @@ describe("erlangB", () => {
     expect(erlangB(2, 2)).toBeCloseTo(0.4, 3);
   });
 });
+
+import { erlangC, serviceLevel } from "./erlangC";
+
+describe("erlangC", () => {
+  it("is 0 when there is no traffic", () => {
+    expect(erlangC(0, 1)).toBeCloseTo(0, 6);
+  });
+  it("returns a probability between 0 and 1 for an under-loaded system", () => {
+    const pw = erlangC(60, 70);
+    expect(pw).toBeGreaterThan(0);
+    expect(pw).toBeLessThan(1);
+  });
+});
+
+describe("serviceLevel", () => {
+  it("rises toward 1 as agents increase", () => {
+    const slLow = serviceLevel(60, 62, 300, 20);
+    const slHigh = serviceLevel(60, 75, 300, 20);
+    expect(slHigh).toBeGreaterThan(slLow);
+    expect(slHigh).toBeLessThanOrEqual(1);
+  });
+});
