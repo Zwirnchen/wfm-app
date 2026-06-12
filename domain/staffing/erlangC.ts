@@ -51,7 +51,7 @@ export function serviceLevel(
   return Math.max(0, Math.min(1, sl));
 }
 
-const MAX_AGENTS = 1000; // safety bound to avoid infinite loops
+const MAX_AGENTS = 1000; // search headroom above the offered load (avoids infinite loops)
 
 /**
  * Smallest agent count meeting the service-level target AND the occupancy cap,
@@ -62,11 +62,18 @@ export function requiredAgents(
   ahtSeconds: number,
   params: StaffingParams,
 ): number {
+  if (ahtSeconds <= 0) return 0; // AHT validated upstream; guard the core against /0
   const a = trafficIntensityErlangs(calls, ahtSeconds, params.intervalLengthMinutes);
   if (a <= 0) return 0;
 
   let n = Math.max(1, Math.floor(a) + 1);
-  while (n < MAX_AGENTS) {
+  // Search up to MAX_AGENTS agents BEYOND the offered load. The bound must be
+  // relative to `a`: an absolute bound would never evaluate any candidate when
+  // floor(a)+1 already exceeds it. For realistic single-queue loads the search
+  // converges far below this headroom; hitting `cap` means the supplied targets
+  // are effectively unreachable, and we return the capped (best-effort) count.
+  const cap = Math.floor(a) + MAX_AGENTS;
+  while (n < cap) {
     const sl = serviceLevel(a, n, ahtSeconds, params.thresholdSeconds);
     const occupancy = a / n;
     if (sl >= params.serviceLevelTarget && occupancy <= params.maxOccupancy) {

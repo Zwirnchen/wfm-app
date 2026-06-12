@@ -30,6 +30,10 @@ describe("erlangC", () => {
     expect(pw).toBeGreaterThan(0);
     expect(pw).toBeLessThan(1);
   });
+  it("is 1 for an unstable system (servers <= a, every call waits)", () => {
+    expect(erlangC(10, 10)).toBe(1);
+    expect(erlangC(10, 8)).toBe(1);
+  });
 });
 
 describe("serviceLevel", () => {
@@ -38,6 +42,14 @@ describe("serviceLevel", () => {
     const slHigh = serviceLevel(60, 75, 300, 20);
     expect(slHigh).toBeGreaterThan(slLow);
     expect(slHigh).toBeLessThanOrEqual(1);
+  });
+  it("is 0 for an unstable system (servers <= a)", () => {
+    expect(serviceLevel(10, 10, 180, 20)).toBe(0);
+  });
+  it("matches a pinned reference value", () => {
+    // Regression pin: computed once from the implementation, not a textbook value.
+    // SL(a=60, N=70, AHT=300, t=20) = 0.9253059133911584.
+    expect(serviceLevel(60, 70, 300, 20)).toBeCloseTo(0.9253059133911584, 4);
   });
 });
 
@@ -74,5 +86,26 @@ describe("requiredAgents", () => {
     const n = requiredAgents(100, 180, { ...params, maxOccupancy: 0.7 });
     const a = trafficIntensityErlangs(100, 180, 30);
     expect(a / n).toBeLessThanOrEqual(0.7 + 1e-9);
+  });
+
+  it("returns 0 when AHT is non-positive (no divide-by-zero)", () => {
+    expect(requiredAgents(100, 0, params)).toBe(0);
+  });
+
+  it("satisfies both constraints under a heavy interval load", () => {
+    // 2000 calls * 180s / 1800s = 200 Erlangs (safely within headroom).
+    const result = requiredAgents(2000, 180, params);
+    const a = trafficIntensityErlangs(2000, 180, 30);
+    expect(serviceLevel(a, result, 180, 20)).toBeGreaterThanOrEqual(0.8);
+    expect(a / result).toBeLessThanOrEqual(0.95 + 1e-9);
+  });
+
+  it("satisfies the occupancy cap for very high loads (relative search bound)", () => {
+    // 100000 calls * 180s / 1800s = 10000 Erlangs. With an absolute MAX_AGENTS
+    // bound, floor(a)+1 already exceeds it and the loop never runs, returning a
+    // count at ~100% occupancy. The relative bound forces the search above the load.
+    const result = requiredAgents(100000, 180, params);
+    const a = trafficIntensityErlangs(100000, 180, 30);
+    expect(a / result).toBeLessThanOrEqual(0.95 + 1e-9);
   });
 });
