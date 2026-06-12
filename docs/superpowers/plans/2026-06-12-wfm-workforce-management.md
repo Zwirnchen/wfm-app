@@ -1049,13 +1049,30 @@ model PlannedBreak {
 Create `infrastructure/db.ts`:
 ```typescript
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+function createPrismaClient(): PrismaClient {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  return new PrismaClient({ adapter });
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
+
+> **Prisma 7 notes (as built):** (1) the datasource `url` is NOT inlined in
+> `schema.prisma`; it lives in a root `prisma.config.ts` (`defineConfig` +
+> `import "dotenv/config"`, since Prisma 7 no longer auto-loads `.env`).
+> (2) Prisma 7's query compiler requires a driver adapter, hence
+> `@prisma/adapter-pg` above (the bare `new PrismaClient()` will not run).
+> (3) No system PostgreSQL is available in the dev sandbox, so a user-space
+> **embedded-postgres** instance is used: `scripts/pg.mjs` with npm scripts
+> `db:run` (foreground), `db:start`/`db:stop` (detached via PID file), port 5433.
+> Declared direct deps: `dotenv`, `pg` (runtime); `@prisma/config`, `@types/pg` (dev).
 
 - [ ] **Step 3: Generate client and create migration**
 
