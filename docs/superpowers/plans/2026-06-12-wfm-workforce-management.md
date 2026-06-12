@@ -184,8 +184,9 @@ describe("erlangB", () => {
     expect(erlangB(0, 5)).toBeCloseTo(0, 6);
   });
   it("matches a known reference value", () => {
-    // A=2 Erlangs, N=2 servers => Erlang B ~= 0.5
-    expect(erlangB(2, 2)).toBeCloseTo(0.5, 3);
+    // A=2 Erlangs, N=2 servers => Erlang B = 0.4
+    // B(1)=2/3; B(2)=(4/3)/(10/3)=0.4
+    expect(erlangB(2, 2)).toBeCloseTo(0.4, 3);
   });
 });
 ```
