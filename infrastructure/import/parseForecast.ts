@@ -14,6 +14,9 @@ export function parseCsv(content: string): RawRow[] {
 
 export function parseXlsx(buffer: ArrayBuffer): RawRow[] {
   const wb = XLSX.read(buffer, { type: "array" });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const firstSheetName = wb.SheetNames[0];
+  if (!firstSheetName) return [];
+  const sheet = wb.Sheets[firstSheetName];
+  if (!sheet) return [];
   return XLSX.utils.sheet_to_json<RawRow>(sheet, { raw: false, defval: "" });
 }

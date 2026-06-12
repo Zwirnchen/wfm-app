@@ -12,8 +12,25 @@ export interface ValidationResult {
   errors: RowError[];
 }
 
+// The importer expects German number formatting (Excel/telephony exports):
+// "." is the thousands separator and "," is the decimal separator.
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+
+/** Parse a German- or machine-formatted number string. Returns NaN if not numeric.
+ *  German convention: "." thousands separator, "," decimal separator.
+ *  Strips thousands dots and converts the decimal comma, e.g. "1.234,5" -> 1234.5,
+ *  "1.000" -> 1000, "180,5" -> 180.5, "100" -> 100.
+ *  Tradeoff: an English-decimal like "180.5" normalizes to 1805. This is the
+ *  accepted German-format behaviour; we deliberately do not auto-detect locale. */
+function parseGermanNumber(raw: string): number {
+  const s = (raw ?? "").trim();
+  if (s === "") return NaN;
+  const normalized = s.replace(/\./g, "").replace(",", ".");
+  // reject anything that isn't a clean number after normalization
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) return NaN;
+  return Number(normalized);
+}
 
 export function validateForecast(rows: RawRow[], intervalLengthMinutes: number): ValidationResult {
   const points: ForecastPoint[] = [];
@@ -25,8 +42,8 @@ export function validateForecast(rows: RawRow[], intervalLengthMinutes: number):
     const reasons: string[] = [];
     const date = row.Datum;
     const intervalStart = row.Intervallstart;
-    const calls = Number(row.Anrufe);
-    const aht = Number(row.AHT);
+    const calls = parseGermanNumber(row.Anrufe);
+    const aht = parseGermanNumber(row.AHT);
 
     if (!DATE_RE.test(date ?? "")) reasons.push("Datum ungültig (erwartet yyyy-mm-dd)");
     if (!TIME_RE.test(intervalStart ?? "")) {
@@ -39,11 +56,12 @@ export function validateForecast(rows: RawRow[], intervalLengthMinutes: number):
 
     const key = `${date}|${intervalStart}`;
     if (reasons.length === 0 && seen.has(key)) reasons.push("Doppeltes Intervall");
-    seen.add(key);
 
     if (reasons.length > 0) {
       errors.push({ line, reason: reasons.join("; ") });
     } else {
+      // Only track valid rows for dedup so invalid rows don't pollute `seen`.
+      seen.add(key);
       points.push({ date, intervalStart, expectedCalls: calls, ahtSeconds: aht });
     }
   });
