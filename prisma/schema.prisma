@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  EMPLOYEE
+  SUPERVISOR
+}
+
+enum ImportStatus {
+  VALIDATED
+  ACTIVE
+  REPLACED
+}
+
+enum PeriodStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum AssignmentStatus {
+  PLANNED
+  CONFIRMED
+}
+
+enum AssignmentSource {
+  FROM_WISH
+  MANUAL
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(EMPLOYEE)
+  employee     Employee?
+}
+
+model Employee {
+  id                  String            @id @default(cuid())
+  userId              String            @unique
+  user                User              @relation(fields: [userId], references: [id])
+  name                String
+  contractWeeklyHours Float             @default(40)
+  active              Boolean           @default(true)
+  wishes              ShiftWish[]
+  assignments         ShiftAssignment[]
+}
+
+model ForecastImport {
+  id           String             @id @default(cuid())
+  fileName     String
+  importedById String
+  importedAt   DateTime           @default(now())
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       ImportStatus       @default(ACTIVE)
+  intervals    ForecastInterval[]
+}
+
+model ForecastInterval {
+  id            String         @id @default(cuid())
+  importId      String
+  import        ForecastImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  date          DateTime // date only (midnight)
+  intervalStart String // "HH:mm"
+  expectedCalls Float
+  ahtSeconds    Float
+
+  @@index([importId, date])
+}
+
+model StaffingParameter {
+  id                    String   @id @default(cuid())
+  serviceLevelTarget    Float    @default(0.8)
+  thresholdSeconds      Int      @default(20)
+  shrinkagePercent      Float    @default(0.3)
+  maxOccupancy          Float    @default(0.85)
+  intervalLengthMinutes Int      @default(30)
+  openingTime           String   @default("08:00")
+  closingTime           String   @default("18:00")
+  validFrom             DateTime @default(now())
+}
+
+model StaffingRequirement {
+  id             String   @id @default(cuid())
+  date           DateTime
+  intervalStart  String
+  requiredAgents Int
+
+  @@unique([date, intervalStart])
+}
+
+model ShiftTemplate {
+  id               String            @id @default(cuid())
+  name             String // "Früh" | "Spät"
+  startTime        String // "HH:mm"
+  endTime          String
+  paidBreakMinutes Int               @default(30)
+  color            String            @default("#3b82f6")
+  active           Boolean           @default(true)
+  wishes           ShiftWish[]
+  assignments      ShiftAssignment[]
+}
+
+model PlanningPeriod {
+  id          String            @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  status      PeriodStatus      @default(DRAFT)
+  wishes      ShiftWish[]
+  assignments ShiftAssignment[]
+}
+
+model ShiftWish {
+  id              String         @id @default(cuid())
+  periodId        String
+  period          PlanningPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee       @relation(fields: [employeeId], references: [id])
+  date            DateTime
+  shiftTemplateId String
+  shiftTemplate   ShiftTemplate  @relation(fields: [shiftTemplateId], references: [id])
+  priority        Int            @default(1)
+  breakPreference String? // "HH:mm" or null
+
+  @@unique([periodId, employeeId, date])
+}
+
+model ShiftAssignment {
+  id              String           @id @default(cuid())
+  periodId        String
+  period          PlanningPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id])
+  date            DateTime
+  shiftTemplateId String
+  shiftTemplate   ShiftTemplate    @relation(fields: [shiftTemplateId], references: [id])
+  status          AssignmentStatus @default(PLANNED)
+  source          AssignmentSource @default(MANUAL)
+  breaks          PlannedBreak[]
+
+  @@unique([employeeId, date])
+}
+
+model PlannedBreak {
+  id              String          @id @default(cuid())
+  assignmentId    String
+  assignment      ShiftAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  start           String // "HH:mm"
+  durationMinutes Int
+}

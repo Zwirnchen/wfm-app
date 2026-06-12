@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# local embedded postgres data dir
+/.pgdata
+
+# prisma generated client (custom output, if ever used)
+/generated
+
 # next.js
 /.next/
 /out/
