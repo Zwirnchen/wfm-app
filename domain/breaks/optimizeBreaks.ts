@@ -1,4 +1,4 @@
-import { enumerateIntervals, toMinutes, intervalCovered } from "../scheduling/intervals";
+import { enumerateIntervals, toMinutes, toHHmm, intervalCovered } from "../scheduling/intervals";
 
 export interface Requirement {
   date: string;
@@ -26,6 +26,10 @@ export interface PlannedBreak {
  * interval with the current largest surplus (present - required). The chosen
  * interval's running "present" count is decremented so later shifts see the
  * updated surplus. Preference wins ties.
+ *
+ * Shifts are processed in the given order and ties are broken first-seen, so
+ * callers should pass a stable order for reproducible output. A shift with no
+ * interval large enough to hold its break receives no planned break.
  */
 export function optimizeBreaks(
   shifts: ShiftToBreak[],
@@ -62,14 +66,22 @@ export function optimizeBreaks(
         best = iv;
       }
     }
-    const chosen = best ?? candidates[0] ?? s.shiftStart;
-    // decrement present across the break's intervals
+    // No interval fits the break (e.g. break longer than the shift): a shift
+    // with no room for its break gets no planned break, so skip it rather than
+    // emit an out-of-shift break. The surplus loop sets `best` on its first
+    // candidate, so `best` is non-null iff `candidates` is non-empty.
+    if (candidates.length === 0) continue;
+    const chosen = best!;
+    // decrement present across the break's intervals; each interval the break
+    // touches is treated as fully occupied (a break whose duration is not a
+    // multiple of the interval length conservatively frees no fractional
+    // capacity).
     for (
       let t = toMinutes(chosen);
       t < toMinutes(chosen) + s.breakMinutes;
       t += intervalLengthMinutes
     ) {
-      const iv = `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+      const iv = toHHmm(t);
       const k = key(s.date, iv);
       present.set(k, (present.get(k) ?? 0) - 1);
     }
