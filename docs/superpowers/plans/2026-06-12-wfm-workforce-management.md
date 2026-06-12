@@ -388,11 +388,17 @@ export function requiredAgents(
   ahtSeconds: number,
   params: StaffingParams,
 ): number {
+  if (ahtSeconds <= 0) return 0;
   const a = trafficIntensityErlangs(calls, ahtSeconds, params.intervalLengthMinutes);
   if (a <= 0) return 0;
 
   let n = Math.max(1, Math.floor(a) + 1);
-  while (n < MAX_AGENTS) {
+  // Search bound is RELATIVE to offered load (not absolute): for realistic
+  // single-queue loads the search converges far below this headroom; hitting
+  // the cap means the supplied targets are effectively unreachable and the
+  // best-effort capped count is returned.
+  const cap = Math.floor(a) + MAX_AGENTS;
+  while (n < cap) {
     const sl = serviceLevel(a, n, ahtSeconds, params.thresholdSeconds);
     const occupancy = a / n;
     if (sl >= params.serviceLevelTarget && occupancy <= params.maxOccupancy) {
