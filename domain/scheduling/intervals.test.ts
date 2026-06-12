@@ -26,8 +26,8 @@ describe("enumerateIntervals", () => {
   it("returns [] when open equals close", () => {
     expect(enumerateIntervals("08:00", "08:00", 30)).toEqual([]);
   });
-  it("returns [] when the first step overshoots close", () => {
-    expect(enumerateIntervals("08:00", "08:10", 30)).toEqual([]);
+  it("includes the open start even when the window is narrower than one step", () => {
+    expect(enumerateIntervals("08:00", "08:10", 30)).toEqual(["08:00"]);
   });
   it("supports a 15-minute step", () => {
     expect(enumerateIntervals("08:00", "09:00", 15)).toEqual([

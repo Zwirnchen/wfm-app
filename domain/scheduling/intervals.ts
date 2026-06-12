@@ -12,10 +12,10 @@ export function toHHmm(minutes: number): string {
 }
 
 /**
- * All interval start times in [open, close) stepping by length.
- * `intervalLengthMinutes` must be > 0; otherwise an empty list is returned.
- * If the window is narrower than a single step, no interval fits and the
- * result is empty (e.g. open=08:00, close=08:10, length=30 -> []).
+ * All interval start times in [open, close) stepping by length: every grid
+ * start `t` with open <= t < close.
+ * `intervalLengthMinutes` must be > 0; otherwise an empty list is returned
+ * (the only guard, which prevents an infinite loop).
  */
 export function enumerateIntervals(
   open: string,
@@ -25,7 +25,6 @@ export function enumerateIntervals(
   if (intervalLengthMinutes <= 0) return [];
   const openMin = toMinutes(open);
   const closeMin = toMinutes(close);
-  if (closeMin - openMin < intervalLengthMinutes) return [];
   const result: string[] = [];
   for (let t = openMin; t < closeMin; t += intervalLengthMinutes) {
     result.push(toHHmm(t));
