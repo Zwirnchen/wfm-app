@@ -46,8 +46,8 @@ export const forecastRouter = router({
           z.object({
             date: z.string(),
             intervalStart: z.string(),
-            expectedCalls: z.number(),
-            ahtSeconds: z.number(),
+            expectedCalls: z.number().min(0),
+            ahtSeconds: z.number().positive(),
           }),
         ),
       }),
@@ -81,13 +81,10 @@ export const forecastRouter = router({
           },
         });
         const reqRows = buildRequirementRows(input.points, params);
-        for (const r of reqRows) {
-          await tx.staffingRequirement.upsert({
-            where: { date_intervalStart: { date: r.date, intervalStart: r.intervalStart } },
-            update: { requiredAgents: r.requiredAgents },
-            create: r,
-          });
-        }
+        await tx.staffingRequirement.deleteMany({
+          where: { date: { gte: periodStart, lte: periodEnd } },
+        });
+        await tx.staffingRequirement.createMany({ data: reqRows });
         return { importId: imp.id, intervals: input.points.length };
       });
     }),

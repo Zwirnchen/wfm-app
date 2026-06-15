@@ -17,11 +17,12 @@ export const adminRouter = router({
         color: z.string(),
       }),
     )
-    .mutation(({ input, ctx }) =>
-      input.id
-        ? ctx.prisma.shiftTemplate.update({ where: { id: input.id }, data: input })
-        : ctx.prisma.shiftTemplate.create({ data: input }),
-    ),
+    .mutation(({ input, ctx }) => {
+      const { id, ...data } = input;
+      return id
+        ? ctx.prisma.shiftTemplate.update({ where: { id }, data })
+        : ctx.prisma.shiftTemplate.create({ data });
+    }),
 
   getParams: supervisorProcedure.query(({ ctx }) =>
     ctx.prisma.staffingParameter.findFirst({ orderBy: { validFrom: "desc" } }),
