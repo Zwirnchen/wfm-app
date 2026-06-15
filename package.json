@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "db:run": "node scripts/pg.mjs run",
     "db:start": "node scripts/pg.mjs start",
-    "db:stop": "node scripts/pg.mjs stop"
+    "db:stop": "node scripts/pg.mjs stop",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
@@ -47,6 +48,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "jsdom": "^29.1.1",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.8"
   }
