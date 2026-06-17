@@ -46,8 +46,11 @@ export default function ParametersPage() {
           <option value={15}>15</option><option value={30}>30</option><option value={60}>60</option>
         </select>
       </label>
+      <label>Öffnungszeit<input type="time" value={form.openingTime} onChange={(e) => setForm({ ...form, openingTime: e.target.value })} /></label>
+      <label>Schließungszeit<input type="time" value={form.closingTime} onChange={(e) => setForm({ ...form, closingTime: e.target.value })} /></label>
       <button disabled={save.isPending} onClick={() => save.mutate(form)}>Speichern</button>
       {save.isSuccess && <p>Gespeichert. Neuer Import wird mit diesen Werten gerechnet.</p>}
+      {save.error && <p role="alert" style={{ color: "crimson" }}>{save.error.message}</p>}
     </main>
   );
 }

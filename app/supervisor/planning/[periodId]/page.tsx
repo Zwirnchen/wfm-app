@@ -39,6 +39,7 @@ export default function PlanningBoard({ params }: { params: Promise<{ periodId: 
           </li>
         ))}
       </ul>
+      {assign.error && <p role="alert" style={{ color: "crimson" }}>{assign.error.message}</p>}
 
       <h2>Coverage (Soll/Ist)</h2>
       <table>
@@ -53,6 +54,7 @@ export default function PlanningBoard({ params }: { params: Promise<{ periodId: 
       </table>
 
       <button onClick={() => planBreaks.mutate({ periodId })}>Pausen automatisch planen</button>
+      {planBreaks.error && <p role="alert" style={{ color: "crimson" }}>{planBreaks.error.message}</p>}
       <button
         onClick={() => {
           if (hasDeficit && !confirm("Es gibt Unterdeckung. Trotzdem veröffentlichen?")) return;
@@ -62,6 +64,7 @@ export default function PlanningBoard({ params }: { params: Promise<{ periodId: 
         Veröffentlichen
       </button>
       {publish.isSuccess && <p>Periode veröffentlicht.</p>}
+      {publish.error && <p role="alert" style={{ color: "crimson" }}>{publish.error.message}</p>}
     </main>
   );
 }

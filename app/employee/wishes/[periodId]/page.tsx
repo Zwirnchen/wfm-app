@@ -35,6 +35,7 @@ export default function WishesPage({ params }: { params: Promise<{ periodId: str
         Wunsch speichern
       </button>
       {upsert.isSuccess && <p>Wunsch gespeichert.</p>}
+      {upsert.error && <p role="alert" style={{ color: "crimson" }}>{upsert.error.message}</p>}
     </main>
   );
 }

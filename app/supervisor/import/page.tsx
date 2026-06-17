@@ -28,6 +28,7 @@ export default function ImportPage() {
     <main style={{ padding: 24 }}>
       <h1>Telefonie-Import</h1>
       <input type="file" accept=".csv,.xlsx" onChange={onFile} />
+      {previewMut.error && <p role="alert" style={{ color: "crimson" }}>{previewMut.error.message}</p>}
       {preview && (
         <section>
           <p>
@@ -47,6 +48,7 @@ export default function ImportPage() {
             Import bestätigen & Bedarf berechnen
           </button>
           {commitMut.isSuccess && <p>Importiert: {commitMut.data.intervals} Intervalle.</p>}
+          {commitMut.error && <p role="alert" style={{ color: "crimson" }}>{commitMut.error.message}</p>}
         </section>
       )}
     </main>
